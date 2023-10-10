@@ -1,2 +1,3 @@
-# kql-queries
-A collection of KQL queries
+# KQL Queries
+A collection of KQL queries.
+
