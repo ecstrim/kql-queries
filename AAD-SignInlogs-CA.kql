@@ -2,14 +2,15 @@
 // a row of data is generated for every CA evaluated
 // CorrelationId is the common column across rows of the same sign in
 SigninLogs
-| take 10
 | mv-expand kind=array ConditionalAccessPolicies
 | project TimeGenerated, 
     CorrelationId, 
     Identity, 
     CA_Status = ConditionalAccessStatus, 
+     CA_Result = ConditionalAccessPolicies["result"], 
     CA_Name = ConditionalAccessPolicies["displayName"], 
     CA_Grant = ConditionalAccessPolicies["enforcedGrantControls"],
     CA_SAT = ConditionalAccessPolicies["conditionsSatisfied"],
     CA_NOTSAT = ConditionalAccessPolicies["conditionsNotSatisfied"],
     ConditionalAccessPolicies
+| order by TimeGenerated desc, CorrelationId
