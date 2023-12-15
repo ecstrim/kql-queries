@@ -1,16 +1,34 @@
 // Get the SignIn logs with Conditional Access Policy Detail
-// a row of data is generated for every CA evaluated
+// a row of data is generated for every CA evaluated, complete with the result of the evaluation for that policy
 // CorrelationId is the common column across rows of the same sign in
+//
+// FINAL_CA_Status is the same for all rows because of the expansion of the policies
 SigninLogs
+| where CorrelationId == 'add590f0-1dc9-f0ed-ef61-fbc188624d45' // per investigare un sign-in
 | mv-expand kind=array ConditionalAccessPolicies
 | project TimeGenerated, 
-    CorrelationId, 
     Identity, 
-    CA_Status = ConditionalAccessStatus, 
-     CA_Result = ConditionalAccessPolicies["result"], 
+    FINAL_Status = ConditionalAccessStatus, 
+    ResultDescription, 
     CA_Name = ConditionalAccessPolicies["displayName"], 
-    CA_Grant = ConditionalAccessPolicies["enforcedGrantControls"],
-    CA_SAT = ConditionalAccessPolicies["conditionsSatisfied"],
-    CA_NOTSAT = ConditionalAccessPolicies["conditionsNotSatisfied"],
-    ConditionalAccessPolicies
+    CA_Result = ConditionalAccessPolicies["result"], 
+    CA_Grant = tostring(ConditionalAccessPolicies["enforcedGrantControls"]),
+    CA_Satisfied = ConditionalAccessPolicies["conditionsSatisfied"],
+    CA_NOT_Satsified = ConditionalAccessPolicies["conditionsNotSatisfied"]
+| order by TimeGenerated desc
+
+//
+// Summarization of different Statuses
+// can be a good starting point for investigating
+SigninLogs
 | order by TimeGenerated desc, CorrelationId
+| project Status = tostring(Status)
+| where Status !has "\"errorCode\":0" and Status != "{\"errorCode\":50140,\"failureReason\":\"This error occurred due to 'Keep me signed in' interrupt when the user was signing-in.\"}"
+| summarize Count = count() by Status
+| order by Count desc
+
+
+//
+YourLogTable
+| extend ParsedErrorDetails = parse_json(ErrorDetails)
+| extend ErrorCode = tostring(ParsedErrorDetails.errorCode), FailureReason = tostring(ParsedErrorDetails.failureReason)
